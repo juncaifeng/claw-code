@@ -25,10 +25,23 @@ type ChatEventPayload =
   | { type: "ToolResult"; payload: string }
   | { type: "TurnEnd" };
 
+type SettingsPayload = {
+  workspaceRoot: string;
+  effectiveModel: string;
+  modelFromConfig: string | null;
+  modelFromEnv: string | null;
+  anthropicApiKeySet: boolean;
+  openaiApiKeySet: boolean;
+  xaiApiKeySet: boolean;
+  dashscopeApiKeySet: boolean;
+};
+
 function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [settings, setSettings] = useState<SettingsPayload | null>(null);
+  const [model, setModel] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const quickActions = useMemo(
@@ -56,6 +69,34 @@ function App() {
     ],
     [],
   );
+
+  const modelOptions = useMemo(
+    () => [
+      { label: "opus", value: "opus" },
+      { label: "sonnet", value: "sonnet" },
+      { label: "haiku", value: "haiku" },
+      { label: "claude-opus-4-6", value: "claude-opus-4-6" },
+      { label: "claude-sonnet-4-6", value: "claude-sonnet-4-6" },
+      { label: "claude-haiku-4-5-20251213", value: "claude-haiku-4-5-20251213" },
+    ],
+    [],
+  );
+
+  async function refreshSettings() {
+    const payload = (await invoke("get_settings")) as SettingsPayload;
+    setSettings(payload);
+    setModel(payload.effectiveModel);
+  }
+
+  async function updateModel(nextModel: string) {
+    setModel(nextModel);
+    try {
+      await invoke("set_model", { model: nextModel });
+      await refreshSettings();
+    } catch (err) {
+      console.error(err);
+    }
+  }
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -97,6 +138,10 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    refreshSettings().catch((err) => console.error(err));
+  }, []);
+
   async function sendPrompt() {
     if (!input.trim() || loading) return;
 
@@ -113,7 +158,7 @@ function App() {
     setLoading(true);
 
     try {
-      await invoke("invoke_prompt", { sessionId: "default", prompt: userMsg.content });
+      await invoke("invoke_prompt", { prompt: userMsg.content });
     } catch (err) {
       console.error(err);
       setMessages((prev) => {
@@ -145,6 +190,24 @@ function App() {
           <button className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-medium hover:bg-slate-100">
             新建任务
           </button>
+        </div>
+
+        <div className="px-4 pb-4">
+          <div className="text-xs font-semibold text-slate-500 mb-2">模型</div>
+          <select
+            className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+            value={model}
+            onChange={(e) => updateModel(e.currentTarget.value)}
+          >
+            {modelOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <div className="mt-2 text-xs text-slate-500">
+            {settings?.anthropicApiKeySet ? "ANTHROPIC_API_KEY 已设置" : "ANTHROPIC_API_KEY 未设置"}
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-2 pb-4">
@@ -293,9 +356,16 @@ function App() {
 
               <div className="px-4 pb-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <select className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm">
-                    <option>claw-code</option>
-                    <option>tauri-desktop-app</option>
+                  <select
+                    className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                    value={model}
+                    onChange={(e) => updateModel(e.currentTarget.value)}
+                  >
+                    {modelOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
                   </select>
                   <button
                     type="button"
