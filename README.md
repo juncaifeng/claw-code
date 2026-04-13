@@ -37,6 +37,7 @@ The canonical implementation lives in [`rust/`](./rust), and the current source 
 ## Current repository shape
 
 - **`rust/`** — canonical Rust workspace and the `claw` CLI binary
+- **`rust/crates/tauri-app/`** — Claw Code native Desktop GUI (Tauri + React + Tailwind)
 - **`USAGE.md`** — task-oriented usage guide for the current product surface
 - **`PARITY.md`** — Rust-port parity status and migration notes
 - **`ROADMAP.md`** — active roadmap and cleanup backlog
@@ -53,6 +54,8 @@ The canonical implementation lives in [`rust/`](./rust), and the current source 
 > ```
 > This repo (`ultraworkers/claw-code`) is **build-from-source only** — follow the steps below.
 
+### Building the CLI
+
 ```bash
 # 1. Clone and build
 git clone https://github.com/ultraworkers/claw-code
@@ -67,6 +70,21 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 
 # 4. Run a prompt
 ./target/debug/claw prompt "say hello"
+```
+
+### Building the Desktop GUI (Tauri)
+
+Claw Code includes an experimental Native Desktop App built with Tauri.
+
+```bash
+cd rust/crates/tauri-app
+npm install
+
+# Run in development mode
+npm run tauri dev
+
+# Build the release bundle (.dmg / .exe / .AppImage)
+npm run tauri build
 ```
 
 > [!NOTE]
